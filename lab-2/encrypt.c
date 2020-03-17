@@ -1,7 +1,7 @@
 /* Copyright (C) 2018 Daniel Page <csdsp@bristol.ac.uk>
  *
- * Use of this source code is restricted per the CC BY-NC-ND license, a copy of 
- * which can be found via http://creativecommons.org (and should be included as 
+ * Use of this source code is restricted per the CC BY-NC-ND license, a copy of
+ * which can be found via http://creativecommons.org (and should be included as
  * LICENSE.txt within the associated archive or repository).
  */
 
@@ -9,14 +9,14 @@
 
 int main( int argc, char* argv[] ) {
     aes_gf28_t k[ 16 ] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-    aes_gf28_t m[ 16 ] = { k };
+    uint8_t m[ 16 ] = { 0x32, 0x43, 0xF6, 0xA8, 0x88, 0x5A, 0x30, 0x8D, 0x31, 0x31, 0x98, 0xA2, 0xE0, 0x37, 0x07, 0x34 };
     aes_gf28_t c[ 16 ] = { 0x39, 0x25, 0x84, 0x1D, 0x02, 0xDC, 0x09, 0xFB, 0xDC, 0x11, 0x85, 0x97, 0x19, 0x6A, 0x0B, 0x32 };
     aes_gf28_t t[ 16 ];
 
     AES_KEY rk;
 
     AES_set_encrypt_key( k, 128, &rk );
-    AES_encrypt( m, t, &rk );  
+    AES_encrypt( m, t, &rk );
 
     if( !memcmp( t, c, 16 * sizeof( aes_gf28_t ) ) ) { printf( "AES.Enc( k, m ) == c\n" ); }
     else { printf( "AES.Enc( k, m ) != c\n" ); }
@@ -42,7 +42,7 @@ aes_gf28_t aes_gf28_mul ( aes_gf28_t a, aes_gf28_t b ) {
     return t;
 }
 
-// using Langrange's theorem 
+// using Langrange's theorem
 aes_gf28_t aes_gf28_inv ( aes_gf28_t a ) {
     aes_gf28_t t_0 = aes_gf28_mul ( a, a ); // a^2
     aes_gf28_t t_1 = aes_gf28_mul ( t_0 , a ); // a^3
@@ -88,4 +88,109 @@ aes_gf28_t aes_dec_sbox ( aes_gf28_t a ) {
     a = aes_gf28_inv ( a );
 
     return a;
+}
+
+#define AES_ENC_RND_KEY_STEP(a,b,c,d) { \
+    s[ a ] = s[ a ] ^ rk[ a ]; \
+    s[ b ] = s[ b ] ^ rk[ b ]; \
+    s[ c ] = s[ c ] ^ rk[ c ]; \
+    s[ d ] = s[ d ] ^ rk[ d ]; \
+}
+
+void aes_enc_rnd_key ( aes_gf28_t * s, const aes_gf28_t * rk ) {
+    AES_ENC_RND_KEY_STEP ( 0, 1, 2, 3 );
+    AES_ENC_RND_KEY_STEP ( 4, 5, 6, 7 );
+    AES_ENC_RND_KEY_STEP ( 8, 9, 10, 11 );
+    AES_ENC_RND_KEY_STEP ( 12, 13, 14, 15 );
+}
+
+#define AES_ENC_RND_SUB_STEP(a,b,c,d) { \
+    s[ a ] = aes_enc_sbox ( s[ a ] ); \
+    s[ b ] = aes_enc_sbox ( s[ b ] ); \
+    s[ c ] = aes_enc_sbox ( s[ c ] ); \
+    s[ d ] = aes_enc_sbox ( s[ d ] ); \
+}
+
+void aes_enc_rnd_sub ( aes_gf28_t * s ) {
+    AES_ENC_RND_SUB_STEP ( 0, 1, 2, 3 );
+    AES_ENC_RND_SUB_STEP ( 4, 5, 6, 7 );
+    AES_ENC_RND_SUB_STEP ( 8, 9, 10, 11 );
+    AES_ENC_RND_SUB_STEP ( 12, 13, 14, 15 );
+}
+
+#define AES_ENC_RND_ROW_STEP(a,b,c,d,e,f,g,h) { \
+    aes_gf28_t __a1 = s[ a ]; \
+    aes_gf28_t __b1 = s[ b ]; \
+    aes_gf28_t __c1 = s[ c ]; \
+    aes_gf28_t __d1 = s[ d ]; \
+                              \
+    s[ e ] = __a1; \
+    s[ f ] = __b1; \
+    s[ g ] = __c1; \
+    s[ h ] = __d1; \
+}
+
+void aes_enc_rnd_row ( aes_gf28_t * s ) {
+    AES_ENC_RND_ROW_STEP ( 1, 5, 9, 13, 13, 1, 5, 9 );
+    AES_ENC_RND_ROW_STEP ( 2, 6, 10, 14, 10, 14, 2, 6 );
+    AES_ENC_RND_ROW_STEP ( 3, 7, 11, 15, 7, 11, 15, 3 );
+}
+
+#define AES_ENC_RND_MIX_STEP(a,b,c,d) { \
+    aes_gf28_t __a1 = s[ a ]; \
+    aes_gf28_t __b1 = s[ b ]; \
+    aes_gf28_t __c1 = s[ c ]; \
+    aes_gf28_t __d1 = s[ d ]; \
+                              \
+    aes_gf28_t __a2 = aes_gf28_mulx ( __a1 ); \
+    aes_gf28_t __b2 = aes_gf28_mulx ( __b1 ); \
+    aes_gf28_t __c2 = aes_gf28_mulx ( __c1 ); \
+    aes_gf28_t __d2 = aes_gf28_mulx ( __d1 ); \
+                                              \
+    aes_gf28_t __a3 = __a1 ^ __a2; \
+    aes_gf28_t __b3 = __b1 ^ __b2; \
+    aes_gf28_t __c3 = __c1 ^ __c2; \
+    aes_gf28_t __d3 = __d1 ^ __d2; \
+                                   \
+    s[ a ] = __a2 ^ __b3 ^ __c1 ^ __d1; \
+    s[ b ] = __a1 ^ __b2 ^ __c3 ^ __d1; \
+    s[ c ] = __a1 ^ __b1 ^ __c2 ^ __d3; \
+    s[ d ] = __a3 ^ __b1 ^ __c1 ^ __d2; \
+}
+
+void aes_enc_rnd_mix ( aes_gf28_t * s ) {
+    AES_ENC_RND_MIX_STEP ( 0, 1, 2, 3 );
+    AES_ENC_RND_MIX_STEP ( 4, 5, 6, 7 );
+    AES_ENC_RND_MIX_STEP ( 8, 9, 10, 11 );
+    AES_ENC_RND_MIX_STEP ( 12, 13, 14, 15 );
+}
+
+void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
+    int Nb = 4;
+
+    aes_gf28_t rk[ 4 * Nb ], s[ 4 * Nb ];
+
+    aes_gf28_t * rcp = AES_RC;
+    aes_gf28_t * rkp = rk;
+
+    U8_TO_U8_N ( s, m );
+    U8_TO_U8_N ( rkp , k );
+
+    // 1 initial round
+    aes_enc_rnd_key ( s, rkp );
+    // Nr - 1 iterated rounds
+    for( int i = 1; i < Nr; i++ ) {
+    aes_enc_rnd_sub ( s );
+    aes_enc_rnd_row ( s );
+    aes_enc_rnd_mix ( s );
+    aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
+    aes_enc_rnd_key ( s, rkp );
+    }
+    // 1 final round
+    aes_enc_rnd_sub ( s );
+    aes_enc_rnd_row ( s );
+    aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
+    aes_enc_rnd_key ( s, rkp );
+
+    U8_TO_U8_N ( r, s );
 }
