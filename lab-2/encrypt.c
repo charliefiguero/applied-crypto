@@ -13,10 +13,16 @@ int main( int argc, char* argv[] ) {
     aes_gf28_t c[ 16 ] = { 0x39, 0x25, 0x84, 0x1D, 0x02, 0xDC, 0x09, 0xFB, 0xDC, 0x11, 0x85, 0x97, 0x19, 0x6A, 0x0B, 0x32 };
     aes_gf28_t t[ 16 ];
 
-    AES_KEY rk;
+    // AES_KEY rk;
 
-    AES_set_encrypt_key( k, 128, &rk );
-    AES_encrypt( m, t, &rk );
+    // AES_set_encrypt_key( k, 128, &rk );
+    // AES_encrypt( m, t, &rk );
+
+    aes_enc( t, m, k );
+
+    for ( int i = 0; i < 16; i++ ) {
+        printf( "%d %d, ", t[i], c[i] );
+    }
 
     if( !memcmp( t, c, 16 * sizeof( aes_gf28_t ) ) ) { printf( "AES.Enc( k, m ) == c\n" ); }
     else { printf( "AES.Enc( k, m ) != c\n" ); }
@@ -187,10 +193,6 @@ void aes_enc_rnd_mix ( aes_gf28_t * s ) {
     AES_ENC_RND_MIX_STEP ( 12, 13, 14, 15 );
 }
 
-// void U8_TO_U8_N ( aes_gf28_t * from, const aes_gf28_t * to ) {
-//     memcpy( to, from, 16);
-// }
-
 void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
     // number of columns
     int Nb = 4;
@@ -207,10 +209,8 @@ void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
     // round keys pointer
     aes_gf28_t * rkp = rk;
 
-    // U8_TO_U8_N ( s, m );
-    // U8_TO_U8_N ( rkp , k );
     memcpy ( s, m, 16 );
-    memcpy ( rpk, k, 16 );
+    memcpy ( rkp, k, 16 );
 
     // 1 initial round
     aes_enc_rnd_key ( s, rkp );
@@ -228,6 +228,5 @@ void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
     aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
     aes_enc_rnd_key ( s, rkp );
 
-    // U8_TO_U8_N ( r, s );
     memcpy( r, s, 16 );
 }
