@@ -90,6 +90,28 @@ aes_gf28_t aes_dec_sbox ( aes_gf28_t a ) {
     return a;
 }
 
+void aes_enc_keyexp_step ( uint8_t* r, const uint8_t* rk , uint8_t rc ) {
+    r[ 0 ] = rc ^ aes_enc_sbox ( rk[ 13 ] ) ^ rk[ 0 ];
+    r[ 1 ] = aes_enc_sbox ( rk[ 14 ] ) ^ rk[ 1 ];
+    r[ 2 ] = aes_enc_sbox ( rk[ 15 ] ) ^ rk[ 2 ];
+    r[ 3 ] = aes_enc_sbox ( rk[ 12 ] ) ^ rk[ 3 ];
+
+    r[ 4 ] = r[ 0 ] ^ rk[ 4 ];
+    r[ 5 ] = r[ 1 ] ^ rk[ 5 ];
+    r[ 6 ] = r[ 2 ] ^ rk[ 6 ];
+    r[ 7 ] = r[ 3 ] ^ rk[ 7 ];
+
+    r[ 8 ] = r[ 4 ] ^ rk[ 8 ];
+    r[ 9 ] = r[ 5 ] ^ rk[ 9 ];
+    r[ 10 ] = r[ 6 ] ^ rk[ 10 ];
+    r[ 11 ] = r[ 7 ] ^ rk[ 11 ];
+
+    r[ 12 ] = r[ 8 ] ^ rk[ 12 ];
+    r[ 13 ] = r[ 9 ] ^ rk[ 13 ];
+    r[ 14 ] = r[ 10 ] ^ rk[ 14 ];
+    r[ 15 ] = r[ 11 ] ^ rk[ 15 ];
+}
+
 #define AES_ENC_RND_KEY_STEP(a,b,c,d) { \
     s[ a ] = s[ a ] ^ rk[ a ]; \
     s[ b ] = s[ b ] ^ rk[ b ]; \
@@ -165,16 +187,30 @@ void aes_enc_rnd_mix ( aes_gf28_t * s ) {
     AES_ENC_RND_MIX_STEP ( 12, 13, 14, 15 );
 }
 
-void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
-    int Nb = 4;
+// void U8_TO_U8_N ( aes_gf28_t * from, const aes_gf28_t * to ) {
+//     memcpy( to, from, 16);
+// }
 
+void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
+    // number of columns
+    int Nb = 4;
+    int Nr = 10;
+
+    // AES round constants: 2^Rn
+    uint8_t AES_RC[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x02, 0x04, 0x08, 0x1B, 0x36};
+
+    //round key and state matrix containing message
     aes_gf28_t rk[ 4 * Nb ], s[ 4 * Nb ];
 
+    // round constants pointer
     aes_gf28_t * rcp = AES_RC;
+    // round keys pointer
     aes_gf28_t * rkp = rk;
 
-    U8_TO_U8_N ( s, m );
-    U8_TO_U8_N ( rkp , k );
+    // U8_TO_U8_N ( s, m );
+    // U8_TO_U8_N ( rkp , k );
+    memcpy ( s, m, 16 );
+    memcpy ( rpk, k, 16 );
 
     // 1 initial round
     aes_enc_rnd_key ( s, rkp );
@@ -192,5 +228,6 @@ void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
     aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
     aes_enc_rnd_key ( s, rkp );
 
-    U8_TO_U8_N ( r, s );
+    // U8_TO_U8_N ( r, s );
+    memcpy( r, s, 16 );
 }

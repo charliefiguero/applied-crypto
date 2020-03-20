@@ -22,6 +22,7 @@ aes_gf28_t aes_gf28_mul ( aes_gf28_t a, aes_gf28_t b );
 aes_gf28_t aes_gf28_inv ( aes_gf28_t a );
 aes_gf28_t aes_enc_sbox ( aes_gf28_t a );
 aes_gf28_t aes_dec_sbox ( aes_gf28_t a );
+void aes_enc_keyexp_step ( uint8_t* r, const uint8_t* rk , uint8_t rc );
 void aes_enc_rnd_key ( aes_gf28_t * s, const aes_gf28_t * rk );
 void aes_enc_rnd_sub ( aes_gf28_t * s );
 void aes_enc_rnd_row ( aes_gf28_t * s );
