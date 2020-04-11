@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <openssl/aes.h>
+// #include <openssl/aes.h>
 
 typedef uint8_t aes_gf28_t;
 

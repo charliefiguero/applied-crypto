@@ -14,15 +14,15 @@ int main( int argc, char* argv[] ) {
     aes_gf28_t t[ 16 ];
 
     // AES_KEY rk;
-
     // AES_set_encrypt_key( k, 128, &rk );
     // AES_encrypt( m, t, &rk );
 
     aes_enc( t, m, k );
 
-    for ( int i = 0; i < 16; i++ ) {
+    for ( int i = 0; i < 16; i++ ) { // Debugging
         printf( "%d %d, ", t[i], c[i] );
     }
+    printf("\n");
 
     if( !memcmp( t, c, 16 * sizeof( aes_gf28_t ) ) ) { printf( "AES.Enc( k, m ) == c\n" ); }
     else { printf( "AES.Enc( k, m ) != c\n" ); }
@@ -199,17 +199,19 @@ void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
     int Nr = 10;
 
     // AES round constants: 2^Rn
-    uint8_t AES_RC[] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x02, 0x04, 0x08, 0x1B, 0x36};
+    uint8_t AES_RC[] = {0x11, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36};
 
     //round key and state matrix containing message
     aes_gf28_t rk[ 4 * Nb ], s[ 4 * Nb ];
 
-    // round constants pointer
+    // round constant pointer
     aes_gf28_t * rcp = AES_RC;
-    // round keys pointer
+    // round key pointer
     aes_gf28_t * rkp = rk;
 
+    // copy the message into the state matrix
     memcpy ( s, m, 16 );
+    // copy the key into the round key matrix pointed at by rkp
     memcpy ( rkp, k, 16 );
 
     // 1 initial round

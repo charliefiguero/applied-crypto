@@ -8,7 +8,8 @@ SOURCES = $(wildcard *.c)
 TARGETS = $(patsubst %.c, %, ${SOURCES})
 
 ${TARGETS} : % : %.c %.h
-	@gcc -Wall -std=gnu99 -O3 -o ${@} $(filter %.c, ${^}) -lgmp -lcrypto
+	@gcc -Wall -std=gnu99 -O3 -o ${@} $(filter %.c, ${^}) -lgmp 
+# 	-lcrypto
 
 all   :             ${TARGETS}
 
