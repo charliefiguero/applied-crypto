@@ -16,6 +16,7 @@
 // #include <openssl/aes.h>
 
 typedef uint8_t aes_gf28_t;
+typedef uint32_t aes_gf28_col_t;
 
 aes_gf28_t aes_gf28_mulx ( aes_gf28_t a );
 aes_gf28_t aes_gf28_mul ( aes_gf28_t a, aes_gf28_t b );
@@ -27,6 +28,9 @@ void aes_enc_rnd_key ( aes_gf28_t * s, const aes_gf28_t * rk );
 void aes_enc_rnd_sub ( aes_gf28_t * s );
 void aes_enc_rnd_row ( aes_gf28_t * s );
 void aes_enc_rnd_mix ( aes_gf28_t * s );
-void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k );
+void U8_TO_U32_LE ( aes_gf28_col_t* t, uint8_t* m, int x );
+void U32_TO_U8_LE ( uint8_t* r, aes_gf28_col_t t, int x);
+void compute_TBoxes();
+void aes_enc( uint8_t* r, uint8_t* m, uint8_t* k );
 
 #endif
