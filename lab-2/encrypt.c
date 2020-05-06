@@ -16,19 +16,28 @@ aes_gf28_col_t AES_ENC_TBOX_2 [256] = { 0 };
 aes_gf28_col_t AES_ENC_TBOX_3 [256] = { 0 };
 aes_gf28_col_t AES_ENC_TBOX_4 [256] = { 0 };
 
+aes_gf28_t sbox_lookup[256];
+
+void compute_sboxes() {
+    for ( int i = 0; i < 256; i++ ) {
+        sbox_lookup[(uint8_t)i] = aes_enc_sbox ( (uint8_t)i );
+    }
+}
+
 int main( int argc, char* argv[] ) {
-    aes_gf28_t k[ 16 ] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-    uint8_t m[ 16 ] = { 0x32, 0x43, 0xF6, 0xA8, 0x88, 0x5A, 0x30, 0x8D, 0x31, 0x31, 0x98, 0xA2, 0xE0, 0x37, 0x07, 0x34 };
+    const aes_gf28_t k[ 16 ] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
+    const uint8_t m[ 16 ] = { 0x32, 0x43, 0xF6, 0xA8, 0x88, 0x5A, 0x30, 0x8D, 0x31, 0x31, 0x98, 0xA2, 0xE0, 0x37, 0x07, 0x34 };
     aes_gf28_t c[ 16 ] = { 0x39, 0x25, 0x84, 0x1D, 0x02, 0xDC, 0x09, 0xFB, 0xDC, 0x11, 0x85, 0x97, 0x19, 0x6A, 0x0B, 0x32 };
     aes_gf28_t t[ 16 ];
 
-    compute_TBoxes();
+    // compute_TBoxes();
+    compute_sboxes();
 
     // AES_KEY rk;
     // AES_set_encrypt_key( k, 128, &rk );
     // AES_encrypt( m, t, &rk );
 
-    aes_enc( t, m, &k ); // <- here is the bug
+    aes_enc( t, m, k ); // <- here is the bug?
 
     for (int i = 0; i < 16; i++) {
       printf("%d, %d\n", t[i], c[i]);
@@ -37,33 +46,6 @@ int main( int argc, char* argv[] ) {
     if( !memcmp( t, c, 16 * sizeof( aes_gf28_t ) ) ) { printf( "AES.Enc( k, m ) == c\n" ); }
     else { printf( "AES.Enc( k, m ) != c\n" ); }
 }
-
-// int main( int argc, char* argv[] ) {
-//   compute_TBoxes();
-//   uint8_t k[ 16 ] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6,
-//                       0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
-//   uint8_t m[ 16 ] = { 0x32, 0x43, 0xF6, 0xA8, 0x88, 0x5A, 0x30, 0x8D,
-//                       0x31, 0x31, 0x98, 0xA2, 0xE0, 0x37, 0x07, 0x34 };
-//   uint8_t c[ 16 ] = { 0x39, 0x25, 0x84, 0x1D, 0x02, 0xDC, 0x09, 0xFB,
-//                       0xDC, 0x11, 0x85, 0x97, 0x19, 0x6A, 0x0B, 0x32 };
-//   uint8_t t[ 16 ];
-
-//   AES_KEY rk;
-
-//   AES_set_encrypt_key( k, 128, &rk );
-//   //AES_encrypt( m, t, &rk );
-//   aes_enc_tbox( t, m, &rk);
-
-//   if( !memcmp( t, c, 16 * sizeof( uint8_t ) ) ) {
-//     printf( "AES.Enc( k, m ) == c\n" );
-//     for (int i = 0; i < 16; i++) {
-//       printf("%d, %d\n", t[i], c[i]);
-//     }
-//   }
-//   else {
-//     printf( "AES.Enc( k, m ) != c\n" );
-//   }
-// }
 
 aes_gf28_t aes_gf28_mulx ( aes_gf28_t a ) {
     if( ( a & 0x80 ) == 0x80 ) { return 0x1B ^ ( a << 1 ); }
@@ -119,19 +101,20 @@ aes_gf28_t aes_enc_sbox ( aes_gf28_t a ) {
     return a;
 }
 
-aes_gf28_t aes_dec_sbox ( aes_gf28_t a ) {
-    a = ( 0x05 ) ^ // 0 0 0 0 0 1 0 1
-    ( a << 1 ) ^ // a_6 a_5 a_4 a_3 a_2 a_1 a_0 0
-    ( a << 3 ) ^ // a_4 a_3 a_2 a_1 a_0 0 0 0
-    ( a << 6 ) ^ // a_1 a_0 0 0 0 0 0 0
-    ( a >> 7 ) ^ // 0 0 0 0 0 0 0 a_7
-    ( a >> 5 ) ^ // 0 0 0 0 0 a_7 a_6 a_5
-    ( a >> 2 ) ; // 0 0 a_7 a_6 a_5 a_4 a_3 a_2
+// Never use this as we are only encrypting 
+// aes_gf28_t aes_dec_sbox ( aes_gf28_t a ) {
+//     a = ( 0x05 ) ^ // 0 0 0 0 0 1 0 1
+//     ( a << 1 ) ^ // a_6 a_5 a_4 a_3 a_2 a_1 a_0 0
+//     ( a << 3 ) ^ // a_4 a_3 a_2 a_1 a_0 0 0 0
+//     ( a << 6 ) ^ // a_1 a_0 0 0 0 0 0 0
+//     ( a >> 7 ) ^ // 0 0 0 0 0 0 0 a_7
+//     ( a >> 5 ) ^ // 0 0 0 0 0 a_7 a_6 a_5
+//     ( a >> 2 ) ; // 0 0 a_7 a_6 a_5 a_4 a_3 a_2
 
-    a = aes_gf28_inv ( a );
+//     a = aes_gf28_inv ( a );
 
-    return a;
-}
+//     return a;
+// }
 
 void aes_enc_keyexp_step ( uint8_t* r, const uint8_t* rk , uint8_t rc ) {
     r[ 0 ] = rc ^ aes_enc_sbox ( rk[ 13 ] ) ^ rk[ 0 ];
@@ -230,52 +213,53 @@ void aes_enc_rnd_mix ( aes_gf28_t * s ) {
     AES_ENC_RND_MIX_STEP ( 12, 13, 14, 15 );
 }
 
-// void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
-//     // number of columns (blocks?)
-//     int Nb = 4;
-//     // number of rounds
-//     int Nr = 10;
+// high runtime, low footprint 
+void aes_enc( uint8_t* r, const uint8_t* m, const uint8_t* k ) {
+    // number of columns (blocks?)
+    int Nb = 4;
+    // number of rounds
+    int Nr = 10;
 
-//     // AES round constants: 2^Rn
-//     uint8_t AES_RC[] = {0x11, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36};
+    // AES round constants: 2^Rn
+    uint8_t AES_RC[] = {0x11, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36};
 
-//     //round key and state matrix containing message
-//     aes_gf28_t rk[ 4 * Nb ], s[ 4 * Nb ];
+    //round key and state matrix containing message
+    aes_gf28_t rk[ 4 * Nb ], s[ 4 * Nb ];
 
-//     // round constant pointer
-//     aes_gf28_t * rcp = AES_RC;
-//     // round key pointer
-//     aes_gf28_t * rkp = rk;
+    // round constant pointer
+    aes_gf28_t * rcp = AES_RC;
+    // round key pointer
+    aes_gf28_t * rkp = rk;
 
-//     // copy the message into the state matrix
-//     memcpy ( s, m, 16 );
-//     // copy the key into the round key matrix pointed at by rkp
-//     memcpy ( rkp, k, 16 );
+    // copy the message into the state matrix
+    memcpy ( s, m, 16 );
+    // copy the key into the round key matrix pointed at by rkp
+    memcpy ( rkp, k, 16 );
 
-//     // 1 initial round
-//     aes_enc_rnd_key ( s, rkp );
-//     // Nr - 1 iterated rounds
-//     for( int i = 1; i < Nr; i++ ) {
-//     aes_enc_rnd_sub ( s );
-//     aes_enc_rnd_row ( s );
-//     aes_enc_rnd_mix ( s );
-//     aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
-//     aes_enc_rnd_key ( s, rkp );
-//     }
-//     // 1 final round
-//     aes_enc_rnd_sub ( s );
-//     aes_enc_rnd_row ( s );
-//     aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
-//     aes_enc_rnd_key ( s, rkp );
+    // 1 initial round
+    aes_enc_rnd_key ( s, rkp );
+    // Nr - 1 iterated rounds
+    for( int i = 1; i < Nr; i++ ) {
+    aes_enc_rnd_sub ( s );
+    aes_enc_rnd_row ( s );
+    aes_enc_rnd_mix ( s );
+    aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
+    aes_enc_rnd_key ( s, rkp );
+    }
+    // 1 final round
+    aes_enc_rnd_sub ( s );
+    aes_enc_rnd_row ( s );
+    aes_enc_keyexp_step ( rkp , rkp , *(++ rcp) );
+    aes_enc_rnd_key ( s, rkp );
 
-//     memcpy( r, s, 16 );
-// }
+    memcpy( r, s, 16 );
+}
 
-void U8_TO_U32_LE ( aes_gf28_col_t* t, uint8_t* m, int x ) {
+void U8_TO_U32_LE ( aes_gf28_col_t* t, const uint8_t* m, int x ) {
     *t =  m[x] << 0| m[x+1] << 8| m[x+2] << 16| m[x+3] << 24;
 }
 
-void U32_TO_U8_LE ( uint8_t* r, aes_gf28_col_t t, int x) {
+void U32_TO_U8_LE ( uint8_t* r, const aes_gf28_col_t t, int x) {
     r[x + 0] = (t >> 0) & 0xFF;
     r[x + 1] = (t >> 8) & 0xFF;
     r[x + 2] = (t >> 16) & 0xFF;
@@ -358,24 +342,25 @@ void compute_TBoxes() {
   }
 }
 
-void aes_enc( uint8_t* r, uint8_t* m, uint8_t* k ) {
-  aes_gf28_col_t *rkp = ( aes_gf28_col_t * )( k );
-  aes_gf28_col_t t_0 , t_1 , t_2 , t_3, t_4 , t_5 , t_6 , t_7;
+// high footprint, low latency version 
+// void aes_enc( uint8_t* r, const uint8_t* m, const aes_gf28_t* k ) {
+//   aes_gf28_col_t *rkp = ( aes_gf28_col_t * ) k ;
+//   aes_gf28_col_t t_0 , t_1 , t_2 , t_3, t_4 , t_5 , t_6 , t_7;
+// 
+//   U8_TO_U32_LE ( &t_0, m, 0  ); U8_TO_U32_LE ( &t_1, m, 8  );
+//   U8_TO_U32_LE ( &t_2, m, 4  ); U8_TO_U32_LE ( &t_3, m, 12 );
 
-  U8_TO_U32_LE ( &t_0, m, 0  ); U8_TO_U32_LE ( &t_1, m, 8  );
-  U8_TO_U32_LE ( &t_2, m, 4  ); U8_TO_U32_LE ( &t_3, m, 12 );
+//   // 1 initial round
+//   AES_ENC_RND_INIT();
 
-  // 1 initial round
-  AES_ENC_RND_INIT();
+//   // Nr - 1 iterated rounds
+//   for( int i = 1; i < Nr; i++ ) {
+//     AES_ENC_RND_ITER();
+//   }
 
-  // Nr - 1 iterated rounds
-  for( int i = 1; i < Nr; i++ ) {
-    AES_ENC_RND_ITER();
-  }
+//   // 1 final round
+//   AES_ENC_RND_FINI();
 
-  // 1 final round
-  AES_ENC_RND_FINI();
-
-  U32_TO_U8_LE ( r, t_0 , 0 ); U32_TO_U8_LE ( r, t_1 , 4 );
-  U32_TO_U8_LE ( r, t_2 , 8 ); U32_TO_U8_LE ( r, t_3 , 12 );
-}
+//   U32_TO_U8_LE ( r, t_0 , 0 ); U32_TO_U8_LE ( r, t_1 , 4 );
+//   U32_TO_U8_LE ( r, t_2 , 8 ); U32_TO_U8_LE ( r, t_3 , 12 );
+// }
