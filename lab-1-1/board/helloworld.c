@@ -19,10 +19,7 @@ int main(int argc, char *argv[])
 		.tsc = false};
 
 	// initialise the development board
-	if (!scale_init(&scale_conf))
-	{
-		return -1;
-	}
+	if (!scale_init(&scale_conf)) { return -1; }
 
 	// char x[] = "hello world";
 
@@ -54,7 +51,7 @@ int main(int argc, char *argv[])
 		int size = octetstr_rd(data, 10);
 		if (size != -1)
 		{
-			octetstr_wr(r, size);
+			octetstr_wr(data, size);
 		}
 	}
 
@@ -68,26 +65,14 @@ int octetstr_rd(uint8_t *r, int n_r)
 	int size = 0;
 	bool returned = false;
 
-	if (!scale_uart_rd_avail())
-	{
-		return -1;
-	}
+	if (!scale_uart_rd_avail()) { return -1; }
+	
 	while (size < n_r)
 	{
-		while (!scale_uart_rd_avail())
-		{
-		}
+		while (!scale_uart_rd_avail()) {}
 		r[size] = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
 		size++;
-		if (r[size] == '/n')
-		{
-			returned = true;
-			break;
-		}
-	}
-	if (!returned)
-	{
-		return n_r;
+		if (r[size] == '\n') { return size; }
 	}
 
 	return size;
@@ -96,10 +81,8 @@ int octetstr_rd(uint8_t *r, int n_r)
 // write an octet string to the UART. encoding it from a byte sequencexofgiven lengthn_x.
 void octetstr_wr(const uint8_t *x, int n_x)
 {
-	if (!scale_uart_wr_avail())
-	{
-		return;
-	}
+	if (!scale_uart_wr_avail()) { return; }
+	
 	for (int i = 0; i < n_x; i++)
 	{
 		scale_uart_wr(SCALE_UART_MODE_BLOCKING, x[i]);
