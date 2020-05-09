@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 		int size = octetstr_rd(data, 10);
 		if (size != -1)
 		{
-			octetstr_wr(r, size);
+			octetstr_wr(data, size);
 		}
 	}
 
@@ -79,7 +79,7 @@ int octetstr_rd(uint8_t *r, int n_r)
 		}
 		r[size] = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
 		size++;
-		if (r[size] == '/n')
+		if (r[size] == '\n')
 		{
 			returned = true;
 			break;
