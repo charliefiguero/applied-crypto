@@ -48,7 +48,10 @@ int main(int argc, char *argv[])
 
 		uint8_t data[10];
 
-		int size = octetstr_rd(data, 10);
+		printout("about to try to read:", 21);
+		int size = octetstr_rd(data, 2);
+		if ( size == -1 ) printout( "couldnt read: returned -1.", 26);
+
 		if (size != -1)
 		{
 			octetstr_wr(data, size);
@@ -62,27 +65,122 @@ int main(int argc, char *argv[])
 // decoding it into a byte sequencer of maximum length n_r
 int octetstr_rd(uint8_t *r, int n_r)
 {
-	int size = 0;
+	//if (!scale_uart_rd_avail()) { return -1; }
+	printout("ready to read:", 14);	
 
-	if (!scale_uart_rd_avail()) { return -1; }
-	
-	while (size < n_r)
-	{
-		while (!scale_uart_rd_avail()) {}
-		r[size] = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
-		size++;
+	// read in first 3 chars
+	uint8_t prefix0 = hex_to_int(scale_uart_rd(SCALE_UART_MODE_BLOCKING));
+	uint8_t prefix1 = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
+	uint8_t colon = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
+
+	if ( colon != ':' ) {
+		printout("", 0);
+		printout("no colon input.", 16);
+		return -1;	
 	}
 
-	return size;
+	if ( prefix0 == 0 ) {
+		printout("prefix0 == 0", 12 );
+	}
+	else if ( prefix0 == 48 ) {
+		printout( "prefix0 == 48", 13 );
+	}
+	else printout("prefix0 is neither 0 nor 48.", 28);
+
+	// calculate size
+	uint8_t size = hex_to_int(prefix0) * 16 + hex_to_int(prefix1);
+	if (size != 1) {
+		printout("size != 1.", 10);	
+	}
+	else printout ("size == 1.", 10);
+	
+	uint8_t i0, i1;
+	for ( int i = 0; i < size; i++ ) {
+		i0 = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
+		i1 = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
+		r[i] = (hex_to_int(i0) * 16) + hex_to_int(i1);
+	}
+	printout("finished reading", 16);
+	return (int) size;
+}
+
+void printout( char* message, int size ) {
+	for ( int i = 0; i < size; i++ ) {
+		scale_uart_wr( SCALE_UART_MODE_BLOCKING, (uint8_t) message[i] );
+	}
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, '\r' );
+	//scale_uart_wr( SCALE_UART_MODE_BLOCKING, '\n' );
 }
 
 // write an octet string to the UART. encoding it from a byte sequencexofgiven lengthn_x.
 void octetstr_wr(const uint8_t *x, int n_x)
 {
-	if (!scale_uart_wr_avail()) { return; }
+	//if (!scale_uart_wr_avail()) { return; }
+
+	uint8_t hex[2];
+
+	// calculate and write prefix
+	int_to_hex(n_x, hex);
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[0] );
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[1] );
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, ':' );
 	
 	for (int i = 0; i < n_x; i++)
+	{ 
+		int_to_hex(x[i], hex);
+		scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[0] );
+		scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[1] );
+	}
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, '\n' );
+}
+
+uint8_t hex_to_int(uint8_t hex) {
+	uint8_t decimal;
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, 'h' );
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex );
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, 'h' );
+
+	switch ( hex ) {
+		case '0' : 
+			decimal = ( 0 );
+			printout("here", 4);
+		case '1' : decimal = ( 1 ); 
+		case '2' : decimal = ( 2 ); 
+		case '3' : decimal = ( 3 );
+		case '4' : decimal = ( 4 ); 
+		case '5' : decimal = ( 5 );
+		case '6' : decimal = ( 6 ); 
+		case '7' : decimal = ( 7 ); 
+		case '8' : decimal = ( 8 ); 
+		case '9' : decimal = ( 9 ); 
+		case 'A' : decimal = ( 10 ); 
+		case 'B' : decimal = ( 11 ); 
+		case 'C' : decimal = ( 12 ); 
+		case 'D' : decimal = ( 13 ); 
+		case 'E' : decimal = ( 14 ); 
+		case 'F' : decimal = ( 15 ); 
+	}
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, 'd' );
+	if (decimal == 0) scale_uart_wr( SCALE_UART_MODE_BLOCKING, 'y' );
+	scale_uart_wr( SCALE_UART_MODE_BLOCKING, 'd' );
+	return decimal;
+}
+
+// hex must be an array size 2
+void int_to_hex(uint8_t decimal, uint8_t* hex ) {
+	uint8_t quotient, remainder;
+	int i= 0;
+
+	quotient = decimal;
+	 
+	while (quotient != 0)
 	{
-		scale_uart_wr(SCALE_UART_MODE_BLOCKING, x[i]);
+		remainder = quotient % 16;
+		if (remainder < 10) hex[1-i] = 48 + remainder;
+		else {
+			hex[1-i] = 55 + remainder;
+			quotient = quotient / 16;
+		}
+		i++;	
 	}
 }
