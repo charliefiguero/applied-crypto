@@ -16,4 +16,4 @@ int octetstr_rd( uint8_t* r, int n_r );
 void octetstr_wr( const uint8_t* x, int n_x );
 void printout( char* message, int size );
 uint8_t hex_to_int( uint8_t hex );
-void int_to_hex(uint8_t decimal, uint8_t* hex );
+void int_to_hex(uint8_t decimal, uint8_t hex[2] );
