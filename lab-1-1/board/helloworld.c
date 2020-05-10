@@ -71,7 +71,6 @@ int octetstr_rd(uint8_t *r, int n_r)
 		while (!scale_uart_rd_avail()) {}
 		r[size] = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
 		size++;
-		if (r[size] == '\n') { return size; }
 	}
 
 	return size;
