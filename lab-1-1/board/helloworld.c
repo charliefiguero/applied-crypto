@@ -63,7 +63,6 @@ int main(int argc, char *argv[])
 int octetstr_rd(uint8_t *r, int n_r)
 {
 	int size = 0;
-	bool returned = false;
 
 	if (!scale_uart_rd_avail()) { return -1; }
 	
@@ -72,19 +71,7 @@ int octetstr_rd(uint8_t *r, int n_r)
 		while (!scale_uart_rd_avail()) {}
 		r[size] = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
 		size++;
-<<<<<<< HEAD
-		if (r[size] == '\n')
-		{
-			returned = true;
-			break;
-		}
-	}
-	if (!returned)
-	{
-		return n_r;
-=======
 		if (r[size] == '\n') { return size; }
->>>>>>> 721f14293c22000615266544a0705a16cb6dcd82
 	}
 
 	return size;
