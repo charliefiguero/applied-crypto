@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 		//   scale_uart_wr( SCALE_UART_MODE_BLOCKING, x[ i ] );
 		// }
 
-		uint8_t data[10];
+		uint8_t data[100];
 
 		printout("about to try to read:", 21);
 		int size = octetstr_rd(data, 2);
@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
 
 		if (size != -1)
 		{
-			//octetstr_wr(data, size);
+			printout("about to write:", 14);
+			octetstr_wr(data, size);
 		}
 	}
 
@@ -93,6 +94,7 @@ int octetstr_rd(uint8_t *r, int n_r)
 		i1 = scale_uart_rd(SCALE_UART_MODE_BLOCKING);
 		r[i] = (hex_to_int(i0) * 16) + hex_to_int(i1);
 	}
+	printout("", 0);
 	for ( int i = 0; i < size; i++ ) {
 		uint8_t tmp[2] = {48, 48};
 		int_to_hex(r[i], tmp);
@@ -116,22 +118,23 @@ void printout( char* message, int size ) {
 void octetstr_wr(const uint8_t *x, int n_x)
 {
 	//if (!scale_uart_wr_avail()) { return; }
-
-	uint8_t hex[2];
+	uint8_t hex[2] = {48, 48};
 
 	// calculate and write prefix
 	int_to_hex(n_x, hex);
 	scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[0] );
 	scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[1] );
 	scale_uart_wr( SCALE_UART_MODE_BLOCKING, ':' );
+	printout("", 0);
 	
 	for (int i = 0; i < n_x; i++)
 	{ 
-		int_to_hex(x[i], hex);
-		scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[0] );
-		scale_uart_wr( SCALE_UART_MODE_BLOCKING, hex[1] );
+		uint8_t tmp[2] = {48, 48};
+		int_to_hex(x[i], tmp);
+		scale_uart_wr( SCALE_UART_MODE_BLOCKING, tmp[0] );
+		scale_uart_wr( SCALE_UART_MODE_BLOCKING, tmp[1] );
 	}
-	scale_uart_wr( SCALE_UART_MODE_BLOCKING, '\n' );
+	printout("", 0);
 }
 
 uint8_t hex_to_int(uint8_t hex) {
